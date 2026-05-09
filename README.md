@@ -1,420 +1,388 @@
-# JWT Authentication System API
+# CompleteAuth Backend
 
-A secure and scalable JWT Authentication API built with Node.js, Express.js, and MongoDB using access tokens, refresh tokens, session management, and token rotation.
-
----
-
-# Features
-
-## Authentication Features
-
-- User Registration
-- User Login
-- Protected User Profile Route (`/me`)
-- Refresh Token Authentication
-- Logout from Current Device
-- Logout from All Devices
-- JWT-based Authentication
-- Password Hashing using bcrypt
-- Session-based Refresh Token Management
+> A production-ready authentication backend with JWT, refresh tokens, OTP email verification, and multi-session management — built with Node.js, Express, and MongoDB.
 
 ---
 
-# Security Features
+## Table of Contents
 
-## Access Token + Refresh Token Strategy
-
-This project uses:
-
-- Short-lived Access Tokens → valid for `15 minutes`
-- Long-lived Refresh Tokens → valid for `7 days`
-
-This improves security because:
-
-- Access tokens expire quickly
-- Refresh tokens are stored securely in HTTP-only cookies
-- Users remain logged in without repeatedly entering credentials
-
----
-
-## Refresh Token Rotation
-
-Every time a refresh token is used:
-
-- A new refresh token is generated
-- Old refresh token becomes invalid
-- Session token hash is updated in database
-
-This prevents:
-
-- Token replay attacks
-- Stolen refresh token reuse
+- [Features](#features)
+- [Tech Stack](#tech-stack)
+- [Project Structure](#project-structure)
+- [Getting Started](#getting-started)
+  - [Prerequisites](#prerequisites)
+  - [Installation](#installation)
+  - [Environment Variables](#environment-variables)
+  - [Running the Server](#running-the-server)
+- [API Reference](#api-reference)
+  - [Register](#post-apiauthregister)
+  - [Verify Email](#post-apiauthverify-email)
+  - [Login](#post-apiauthlogin)
+  - [Get Current User](#get-apiauthme)
+  - [Refresh Token](#post-apiauthrefresh-token)
+  - [Logout](#post-apiauthlogout)
+  - [Logout All Sessions](#post-apiauthlogout-all)
+- [Architecture Overview](#architecture-overview)
+- [Adding New Features](#adding-new-features)
 
 ---
 
-## Session Management
+## Features
 
-Each login creates a new session document containing:
-
-- User ID
-- Hashed Refresh Token
-- IP Address
-- User Agent
-- Revoked Status
-
-This enables:
-
-- Multi-device login support
-- Logout from specific devices
-- Logout from all devices
-- Session revocation
+- **User Registration** with email OTP verification
+- **JWT Access Tokens** (short-lived) + **Refresh Tokens** (long-lived, httpOnly cookie)
+- **Multi-session management** — track sessions per device/IP
+- **Logout single session** or **revoke all sessions** at once
+- **Refresh token hashing** — raw tokens never stored in DB
+- **Google OAuth** via Nodemailer for sending OTP emails
+- **Modular architecture** — controllers, services, models cleanly separated
 
 ---
 
-## Refresh Token Hashing
+## Tech Stack
 
-Refresh tokens are never stored directly in the database.
-
-Instead:
-
-- Token is hashed using SHA-256
-- Only hashed value is stored
-
-This improves security in case the database is compromised.
+| Layer | Technology |
+|---|---|
+| Runtime | Node.js |
+| Framework | Express.js |
+| Database | MongoDB + Mongoose |
+| Auth | JWT (jsonwebtoken) |
+| Email | Nodemailer + Google OAuth2 |
+| Environment | dotenv |
 
 ---
 
-## HTTP-Only Secure Cookies
+## Project Structure
 
-Refresh tokens are stored in cookies with:
-
-```js
-httpOnly: true
-secure: true
-sameSite: "strict"
 ```
-
-Benefits:
-
-- Prevents JavaScript access to cookies
-- Reduces XSS attack risk
-- Helps prevent CSRF attacks
-
----
-
-# Tech Stack
-
-## Backend
-
-- Node.js
-- Express.js
-- MongoDB
-- Mongoose
-
-## Authentication & Security
-
-- JWT
-- bcrypt
-- crypto
-- cookie-parser
-
-## Development Tools
-
-- morgan
-- dotenv
-
----
-
-# Folder Structure
-
-```bash
-project/
-│
-├── config/
-│   ├── config.js
-│   └── db.js
-│
-├── controllers/
-│   └── auth.controller.js
-│
-├── models/
-│   ├── user.model.js
-│   └── session.model.js
-│
-├── routes/
-│   └── auth.routes.js
-│
-├── app.js
-├── server.js
-├── .env
+completeauth-backend/
+├── server.js                  # Entry point — starts server, connects MongoDB
 ├── package.json
-└── README.md
+└── src/
+    ├── app.js                 # Express setup, middleware, route mounting
+    ├── config/
+    │   ├── config.js          # Loads & exports all environment variables
+    │   └── database.js        # MongoDB connection logic
+    ├── controllers/
+    │   └── auth.controller.js # Core auth logic (register, login, OTP, tokens, logout)
+    ├── models/
+    │   ├── user.model.js      # User schema (username, email, password, verified)
+    │   ├── otp.model.js       # OTP schema (email, otp, expiresAt)
+    │   └── session.model.js   # Session schema (user, refreshTokenHash, ip, userAgent, revoked)
+    ├── routes/
+    │   └── auth.routes.js     # Auth route definitions
+    ├── services/
+    │   └── email.service.js   # Email sending via Nodemailer
+    └── utils/
+        └── utils.js           # OTP generation, HTML email templates
 ```
 
 ---
 
-# Environment Variables
+## Getting Started
 
-Create a `.env` file in the root directory.
+### Prerequisites
 
-```env
-MONGO_URI=your_mongodb_connection_string
-JWT_SECRET=your_super_secret_key
-PORT=3000
-```
+- Node.js v18+
+- MongoDB (local or Atlas)
+- A Google account for OAuth email sending
 
----
-
-# Installation
-
-## Clone Repository
+### Installation
 
 ```bash
-git clone https://github.com/your-username/your-repo.git
-```
-
-## Install Dependencies
-
-```bash
+git clone https://github.com/your-username/completeauth-backend.git
+cd completeauth-backend
 npm install
 ```
 
-## Start Development Server
+### Environment Variables
+
+Create a `.env` file in the root directory. All required keys are defined in `src/config/config.js`:
+
+```env
+# Server
+PORT=3001
+
+# MongoDB
+MONGO_URI=mongodb://localhost:27017/completeauth
+
+# JWT
+JWT_SECRET=your_jwt_secret_here
+JWT_ACCESS_EXPIRES_IN=15m
+JWT_REFRESH_EXPIRES_IN=7d
+
+# Google OAuth (for Nodemailer email sending)
+GOOGLE_CLIENT_ID=your_google_client_id
+GOOGLE_CLIENT_SECRET=your_google_client_secret
+GOOGLE_REFRESH_TOKEN=your_google_refresh_token
+GOOGLE_USER=your_gmail_address@gmail.com
+```
+
+> **How to get Google OAuth credentials:**
+> Go to [Google Cloud Console](https://console.cloud.google.com/) → Create OAuth 2.0 credentials → Use [OAuth Playground](https://developers.google.com/oauthplayground) to generate a refresh token with the `https://mail.google.com/` scope.
+
+### Running the Server
 
 ```bash
+# Development
 npm run dev
+
+# Production
+npm start
 ```
+
+Server runs at `http://localhost:3001` by default.
 
 ---
 
-# API Endpoints
+## API Reference
 
-## Base URL
+Base URL: `http://localhost:3001/api/auth`
+
+---
+
+### POST `/api/auth/register`
+
+Registers a new user and sends an OTP to their email for verification.
+
+**Request Body**
+
+```json
+{
+  "username": "testuser",
+  "email": "test@example.com",
+  "password": "password123"
+}
+```
+
+**Response** `201 Created`
+
+```json
+{
+  "message": "Registration successful. Please verify your email."
+}
+```
+
+**cURL**
 
 ```bash
-/api/auth
+curl -X POST http://localhost:3001/api/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"username":"testuser","email":"test@example.com","password":"password123"}'
 ```
 
 ---
 
-# 1. Register User
+### POST `/api/auth/verify-email`
 
-## Endpoint
+Verifies the user's email using the OTP sent during registration.
 
-```http
-POST /api/auth/register
-```
-
-## Request Body
+**Request Body**
 
 ```json
 {
-  "username": "tarun",
-  "email": "tarun@example.com",
-  "password": "123456"
+  "email": "test@example.com",
+  "otp": "123456"
 }
 ```
 
-## Response
+**Response** `200 OK`
 
 ```json
 {
-  "message": "User created successfully",
+  "message": "Email verified successfully."
+}
+```
+
+**cURL**
+
+```bash
+curl -X POST http://localhost:3001/api/auth/verify-email \
+  -H "Content-Type: application/json" \
+  -d '{"email":"test@example.com","otp":"123456"}'
+```
+
+---
+
+### POST `/api/auth/login`
+
+Authenticates the user. Returns a JWT access token and sets a `refreshToken` httpOnly cookie.
+
+**Request Body**
+
+```json
+{
+  "email": "test@example.com",
+  "password": "password123"
+}
+```
+
+**Response** `200 OK`
+
+```json
+{
+  "accessToken": "<JWT_ACCESS_TOKEN>",
   "user": {
-    "username": "tarun",
-    "email": "tarun@example.com"
-  },
-  "accessToken": "jwt_token"
+    "id": "...",
+    "username": "testuser",
+    "email": "test@example.com"
+  }
 }
+```
+
+> Refresh token is set as an httpOnly cookie — not exposed in the response body.
+
+**cURL**
+
+```bash
+curl -X POST http://localhost:3001/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"test@example.com","password":"password123"}' \
+  -c cookies.txt
 ```
 
 ---
 
-# 2. Login User
+### GET `/api/auth/me`
 
-## Endpoint
+Returns the currently authenticated user's profile. Requires a valid access token.
 
-```http
-POST /api/auth/login
+**Headers**
+
+```
+Authorization: Bearer <ACCESS_TOKEN>
 ```
 
-## Request Body
+**Response** `200 OK`
 
 ```json
 {
-  "email": "tarun@example.com",
-  "password": "123456"
+  "id": "...",
+  "username": "testuser",
+  "email": "test@example.com",
+  "verified": true
 }
 ```
 
----
+**cURL**
 
-# 3. Get Current User
-
-## Endpoint
-
-```http
-GET /api/auth/me
-```
-
-## Headers
-
-```http
-Authorization: Bearer ACCESS_TOKEN
+```bash
+curl -X GET http://localhost:3001/api/auth/me \
+  -H "Authorization: Bearer <ACCESS_TOKEN>"
 ```
 
 ---
 
-# 4. Refresh Access Token
+### POST `/api/auth/refresh-token`
 
-## Endpoint
+Issues a new access token using the refresh token stored in the cookie.
 
-```http
-POST /api/auth/refresh-token
-```
+**Cookie Required:** `refreshToken`
 
-## Cookie Required
-
-```http
-refreshToken
-```
-
----
-
-# 5. Logout Current Device
-
-## Endpoint
-
-```http
-POST /api/auth/logout
-```
-
----
-
-# 6. Logout From All Devices
-
-## Endpoint
-
-```http
-POST /api/auth/logout-all
-```
-
----
-
-# Database Models
-
-## User Model
-
-```js
-{
-  username: String,
-  email: String,
-  password: String
-}
-```
-
----
-
-## Session Model
-
-```js
-{
-  user: ObjectId,
-  refreshTokenHash: String,
-  ip: String,
-  userAgent: String,
-  revoked: Boolean
-}
-```
-
----
-
-# Authentication Flow
-
-## Login Flow
-
-1. User logs in
-2. Password is verified
-3. Refresh token is generated
-4. Refresh token hash is stored in database
-5. Access token is returned
-6. Refresh token stored in HTTP-only cookie
-
----
-
-## Protected Route Flow
-
-1. Access token sent in Authorization header
-2. JWT token verified
-3. Session validated
-4. User data returned
-
----
-
-## Refresh Token Flow
-
-1. Refresh token read from cookies
-2. JWT verified
-3. Token hash matched with database
-4. New refresh token generated
-5. Session updated
-6. New access token returned
-
----
-
-# Security Best Practices Implemented
-
-- Password hashing with bcrypt
-- Refresh token hashing
-- Refresh token rotation
-- HTTP-only cookies
-- Session validation
-- Session revocation
-- JWT expiration handling
-- Environment variable validation
-
----
-
-# Suggested Improvements
-
-You can further improve this project by adding:
-
-- Email Verification
-- Forgot Password Feature
-- Rate Limiting
-- Helmet.js Security Headers
-- Role-based Authorization
-- OAuth Login (Google/GitHub)
-- Redis Session Storage
-- Access Token Blacklisting
-- API Validation using Joi/Zod
-- Unit & Integration Testing
-
----
-
-# Dependencies Used
+**Response** `200 OK`
 
 ```json
 {
-  "bcrypt": "^5.x",
-  "cookie-parser": "^1.x",
-  "crypto": "built-in",
-  "dotenv": "^16.x",
-  "express": "^4.x",
-  "jsonwebtoken": "^9.x",
-  "mongoose": "^8.x",
-  "morgan": "^1.x"
+  "accessToken": "<NEW_JWT_ACCESS_TOKEN>"
 }
+```
+
+**cURL**
+
+```bash
+curl -X POST http://localhost:3001/api/auth/refresh-token \
+  -b cookies.txt
 ```
 
 ---
 
-# Author
+### POST `/api/auth/logout`
 
-Developed by Tarun Rajput
+Revokes the current session and clears the refresh token cookie.
+
+**Cookie Required:** `refreshToken`
+
+**Response** `200 OK`
+
+```json
+{
+  "message": "Logged out successfully."
+}
+```
+
+**cURL**
+
+```bash
+curl -X POST http://localhost:3001/api/auth/logout \
+  -b cookies.txt
+```
 
 ---
 
-# License
+### POST `/api/auth/logout-all`
 
-This project is licensed under the MIT License.
+Revokes **all active sessions** for the authenticated user across all devices.
+
+**Cookie Required:** `refreshToken`
+
+**Response** `200 OK`
+
+```json
+{
+  "message": "All sessions logged out."
+}
+```
+
+**cURL**
+
+```bash
+curl -X POST http://localhost:3001/api/auth/logout-all \
+  -b cookies.txt
+```
+
+---
+
+## Architecture Overview
+
+```
+Request
+  │
+  ▼
+auth.routes.js       ← Route definitions & middleware
+  │
+  ▼
+auth.controller.js   ← Business logic (validate, query, respond)
+  │
+  ├──▶ user.model.js      ← User data
+  ├──▶ otp.model.js       ← OTP storage with expiry
+  ├──▶ session.model.js   ← Refresh token sessions
+  │
+  ├──▶ email.service.js   ← Send OTP via Gmail OAuth
+  └──▶ utils.js           ← OTP generator, email HTML template
+```
+
+**Token Flow:**
+
+1. Login → server issues short-lived `accessToken` (response body) + long-lived `refreshToken` (httpOnly cookie)
+2. Access protected routes → send `Authorization: Bearer <accessToken>`
+3. Access token expires → call `/refresh-token` with the cookie to get a new one
+4. Logout → refresh token session is revoked in DB, cookie is cleared
+
+**Security notes:**
+- Refresh tokens are **hashed (SHA-256)** before storing in MongoDB — raw token is never saved
+- Sessions track `ip` and `userAgent` for audit purposes
+- OTPs have a TTL via `expiresAt` field and are deleted post-verification
+
+---
+
+## Adding New Features
+
+1. **New route** → add to `src/routes/auth.routes.js`
+2. **New business logic** → add handler in `src/controllers/auth.controller.js` (or create a new controller)
+3. **New DB collection** → add Mongoose schema in `src/models/`
+4. **New external service** → add to `src/services/`
+5. **New config key** → add to `.env` and export from `src/config/config.js`
+
+---
+
+> Built with care for security, scalability, and clean code.

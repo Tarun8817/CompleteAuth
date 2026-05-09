@@ -1,0 +1,204 @@
+Q: Why not store token in localStorage or cookies?
+
+👉 We generally avoid localStorage because it is vulnerable to XSS attacks.
+If an attacker injects a script, they can easily read the token and steal it.
+
+👉 Cookies are also not fully safe because of CSRF attacks, where a malicious site can send requests automatically using the stored cookie.
+
+
+Simple Answer
+
+Q: What about storing token in memory?
+
+👉 Storing token in memory (like variables/state) is more secure than localStorage and cookies because:
+
+• It is not accessible globally
+• It is cleared when page refreshes
+
+
+--------------------------------------------------
+
+Final Interview Answer (with roles)
+
+👉 “We use two tokens: Access Token and Refresh Token, and we also include user roles for authorization.”
+
+When a user logs in or registers, the server generates:
+
+• Access Token (short-lived)
+• Refresh Token (long-lived)
+
+
+What each token does
+
+1. Access Token
+
+• Used to access APIs
+• Stored in memory
+• Contains:
+   - user ID
+   - role (e.g., admin, user)
+• Expires quickly (e.g., 15 minutes)
+
+
+2. Refresh Token
+
+• Used to generate a new access token
+• Stored in HTTP-only cookie
+• Long expiry (e.g., 7 days)
+
+
+--------------------------------------------------
+
+Flow (simple)
+
+1. Login → get access + refresh token
+
+2. Access token used for API calls
+
+3. If access token expires →
+   use refresh token
+
+4. New access token generated
+
+
+👉 “Refresh token is stored in an HTTP-only secure cookie to prevent XSS and improve security.”
+
+
+--------------------------------------------------
+
+Advanced Backend Topic
+
+Refresh Token Rotation (What, Why, When)
+
+What:
+Refresh token rotation is a technique where a new refresh token is generated every time it is used, and the old refresh token is invalidated.
+
+Why:
+It is used to improve security by preventing token reuse (replay attacks).
+If a refresh token is stolen, it cannot be used multiple times.
+It also helps in detecting suspicious activity.
+
+When:
+It is used when the access token expires.
+The client sends the refresh token to the server, and the server issues:
+• a new access token
+• a new refresh token
+
+while invalidating the old refresh token.
+
+
+One-line answer:
+
+👉 “Refresh token rotation enhances security by replacing old refresh tokens with new ones on every use, preventing replay attacks.”
+
+
+--------------------------------------------------
+
+Important Point
+
+👉 Refresh token ka ek hi kaam hota hai:
+New access token generate karna.
+
+
+--------------------------------------------------
+
+Overall Kahani (Simple Understanding)
+
+👉 Suppose main backend par koi transaction kar raha hoon.
+
+Frontend refresh token ko server ke paas bhejega.
+
+Server refresh token verify karega aur:
+• new access token generate karega
+• usko memory me store kiya jayega
+
+
+👉 Agar attacker refresh token ke saath request bhej deta hai:
+
+Toh bhi server directly transaction allow nahi karega.
+
+Protected APIs ko access karne ke liye:
+• valid access token chahiye hota hai
+
+Aur access token:
+• short-lived hota hai
+• memory me store hota hai
+• baar-baar refresh hota rehta hai
+
+
+👉 Isliye proper authentication ke liye:
+• Access Token
+• Refresh Token
+
+dono ka use kiya jata hai.
+
+
+--------------------------------------------------
+
+Session Storage
+
+sessionStorage localStorage se thoda safer hota hai because:
+• tab close hone par clear ho jata hai
+
+But:
+• still XSS vulnerable hota hai
+
+Isliye sensitive tokens ke liye preferred nahi hota.
+
+
+--------------------------------------------------
+
+Access Token Expiry
+
+👉 Access token ka expiry generally:
+15 minutes hota hai.
+
+👉 Refresh token:
+7 days ya usse zyada bhi ho sakta hai.
+
+
+Agar user application ko 15 minutes se zyada use karta hai:
+
+Toh frontend automatically:
+• refresh token wali API hit karta hai
+• new access token generate karwata hai
+
+
+--------------------------------------------------
+
+Why use cookie-parser?
+
+👉 cookie-parser Express.js middleware hota hai jo cookies ko read karne me help karta hai.
+
+Example:
+
+req.cookies.refreshToken
+
+👉 HTTP-only cookie ko backend properly access kar sake isliye cookie-parser use karte hain.
+
+
+--------------------------------------------------
+
+Token Blacklisting
+
+👉 Token Blacklisting logout ke time use hota hai.
+
+Jab user logout karta hai:
+• token blacklist me add kar diya jata hai
+
+Uske baad:
+• even agar token expire nahi hua ho
+• server us token ko reject kar deta hai
+
+👉 Isse stolen ya old tokens reuse nahi ho pate.
+
+
+--------------------------------------------------
+
+Short Final Interview Summary
+
+👉 “We use short-lived Access Tokens and long-lived Refresh Tokens for secure authentication.
+
+Access Tokens are stored in memory and used for API access, while Refresh Tokens are stored in HTTP-only secure cookies and used to generate new Access Tokens.
+
+We also implement Refresh Token Rotation and Token Blacklisting for better security.”

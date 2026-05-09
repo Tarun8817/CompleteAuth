@@ -1,0 +1,110 @@
+1. Register User (POST /api/auth/register)
+This endpoint requires a JSON body containing the username, email, and password.
+
+curl -X POST http://localhost:3001/api/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "username": "testuser",
+    "email": "testuser@example.com",
+    "password": "mysecurepassword"
+  }'
+------------------------------------------------------------------
+
+
+2. Get Me (GET /api/auth/me)
+This endpoint expects the accessToken in the Authorization header as a Bearer token. (Replace <YOUR_ACCESS_TOKEN> with the actual token you received from the registration response).
+
+
+curl -X GET http://localhost:3001/api/auth/get-me \
+  -H "Authorization: Bearer <YOUR_ACCESS_TOKEN>"
+
+-----------------------------------------------------------
+
+3. Refresh Token (GET /api/auth/refresh-token)
+This endpoint expects the refreshToken to be sent via a Cookie, since you are using req.cookies.refreshToken in your controller. (Replace <YOUR_REFRESH_TOKEN> with the actual refresh token).
+
+
+curl -X GET http://localhost:3001/api/auth/refresh-token \
+  -H "Cookie: refreshToken=<YOUR_REFRESH_TOKEN>"
+
+-------------------------------------------------------------
+
+4. Logout Api
+
+curl -X POST http://localhost:3000/api/a
+uth/logout \
+  -b "refreshToken=<your_refresh_token>"
+
+
+
+
+
+
+
+
+
+
+
+
+# 1. Register
+curl -X POST http://localhost:5000/api/auth/register -H "Content-Type: application/json" -d '{"username":"testuser","email":"test@example.com","password":"Test@1234"}'
+
+# 2. Login & Save Cookie
+curl -X POST http://localhost:5000/api/auth/login -H "Content-Type: application/json" -d '{"email":"test@example.com","password":"Test@1234"}' -c cookies.txt -i
+
+# 3. Get Profile
+curl -X GET http://localhost:5000/api/auth/me -H "Authorization: Bearer YOUR_ACCESS_TOKEN" -b cookies.txt
+
+# 4. Refresh Token
+curl -X POST http://localhost:5000/api/auth/refresh-token -b cookies.txt -c cookies.txt
+
+# 5. Logout
+curl -X POST http://localhost:5000/api/auth/logout -b cookies.txt  
+
+
+
+
+
+
+
+
+
+
+curl -X POST http://localhost:5000/api/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "username": "tarun123",
+    "email": "tarun@example.com",
+    "password": "Password123"
+  }'
+
+
+
+  curl -X POST http://localhost:5000/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "tarun@example.com",
+    "password": "Password123"
+  }' \
+  -c cookies.txt
+
+
+
+ curl -X GET http://localhost:5000/api/auth/me \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN_HERE" \
+  -b cookies.txt
+
+
+curl -X POST http://localhost:5000/api/auth/refresh-token \
+  -b cookies.txt \
+  -c cookies.txt
+
+
+  curl -X POST http://localhost:5000/api/auth/logout \
+  -b cookies.txt \
+  -c cookies.txt    
+
+
+  curl -X POST http://localhost:5000/api/auth/logout-all \
+  -b cookies.txt \
+  -c cookies.txt
